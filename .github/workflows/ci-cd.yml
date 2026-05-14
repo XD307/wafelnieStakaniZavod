@@ -1,0 +1,130 @@
+name: CI/CD Завод по производству вафельных стаканчиков
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+env:
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_DB: test_db
+
+jobs:
+  # Проверка бэкенда (FastAPI + PostgreSQL)
+  test-backend:
+    runs-on: ubuntu-latest
+    
+    # Запускаем PostgreSQL для тестов
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      # Скачиваем код из репозитория
+      - uses: actions/checkout@v4
+
+      # Устанавливаем Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Устанавливаем зависимости для бэкенда
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+        working-directory: ./backend
+
+      # Запускаем тесты бэкенда
+      - name: Run backend tests
+        run: |
+          pytest tests/ -v
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+  # Проверка фронтенда (React)
+  test-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      # Устанавливаем Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Устанавливаем зависимости для фронтенда
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./frontend
+
+      # Проверяем что React собирается без ошибок
+      - name: Build React app
+        run: npm run build
+        working-directory: ./frontend
+
+      # Запускаем тесты если они есть
+      - name: Run frontend tests
+        run: npm test -- --watchAll=false
+        working-directory: ./frontend
+        continue-on-error: true
+
+  # Простая проверка что все файлы на месте
+  check-structure:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check project structure
+        run: |
+          echo "Проверка структуры проекта:"
+          
+          if [ -d "backend" ]; then
+            echo "Папка backend найдена"
+          else
+            echo "Ошибка: нет папки backend"
+            exit 1
+          fi
+          
+          if [ -f "backend/requirements.txt" ]; then
+            echo "Файл requirements.txt найден"
+          else
+            echo "Ошибка: нет requirements.txt"
+            exit 1
+          fi
+          
+          if [ -f "backend/main.py" ]; then
+            echo "Файл main.py найден"
+          else
+            echo "Ошибка: нет main.py"
+            exit 1
+          fi
+          
+          if [ -d "frontend" ]; then
+            echo "Папка frontend найдена"
+          else
+            echo "Ошибка: нет папки frontend"
+            exit 1
+          fi
+          
+          if [ -f "frontend/package.json" ]; then
+            echo "Файл package.json найден"
+          else
+            echo "Ошибка: нет package.json"
+            exit 1
+          fi
+          
+          echo "Все проверки пройдены успешно"
