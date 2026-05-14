@@ -38,7 +38,7 @@ jobs:
       - name: Create tests folder
         run: |
           mkdir -p tests
-          echo "def test_hello(): assert 1 + 1 == 2" > tests/test.py
+          echo "def test_hello(): assert 1 + 1 == 2" > tests/test_main.py
         working-directory: ./backend
       
       - name: Run tests
