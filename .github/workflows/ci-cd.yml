@@ -41,7 +41,7 @@ jobs:
       # Устанавливаем зависимости для бэкенда
       - name: Install dependencies
         run: |
-          pip install -r backend/requirements.txt
+          pip install -r 'backend/requirements.txt'
         working-directory: ./backend
 
       # Запускаем тесты бэкенда
